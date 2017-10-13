@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+
+    <!-- 获取时间戳字符串 -->
+    <timestamp key="day" datePattern="yyyyMMdd"></timestamp>
+    <!-- 控制台输出日志 -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+        <!--<layout class="ch.qos.logback.classic.PatternLayout">-->
+        <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n-->
+        <!--</pattern>-->
+        <!--</layout>-->
+    </appender>
+
+
+    <!-- 文件输出日志 (文件大小策略进行文件输出，超过指定大小对文件备份) -->
+    <appender name="FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>../logs/tag-service.log</File>
+        <!-- 日志文件rolling策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>../logs/${day}/tag-service.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 如果按天来回滚，则最大保存时间为30天，30天之前的都将被清理掉 -->
+            <maxHistory>30</maxHistory>
+            <!--<timeBasedFileNamingAndTriggeringPolicy-->
+            <!--class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">-->
+            <!--<maxFileSize>30MB</maxFileSize>-->
+            <!--</timeBasedFileNamingAndTriggeringPolicy>-->
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+        <!--<layout class="ch.qos.logback.classic.PatternLayout">-->
+        <!--<pattern>-->
+        <!--%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-->
+        <!-- -%msg%n-->
+        <!--</pattern>-->
+        <!--</layout>-->
+    </appender>
+
+    <appender name="rerun"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>../logs/rerun.log</File>
+        <!-- 日志文件rolling策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>../logs/${day}/rerun.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 如果按天来回滚，则最大保存时间为30天，30天之前的都将被清理掉 -->
+            <maxHistory>30</maxHistory>
+            <!--<timeBasedFileNamingAndTriggeringPolicy-->
+            <!--class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">-->
+            <!--<maxFileSize>30MB</maxFileSize>-->
+            <!--</timeBasedFileNamingAndTriggeringPolicy>-->
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+        <!--<layout class="ch.qos.logback.classic.PatternLayout">-->
+        <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-->
+        <!-- -%msg%n-->
+        <!--</pattern>-->
+        <!--</layout>-->
+    </appender>
+
+    <appender name="dwindex"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>../logs/dwindex.log</File>
+        <!-- 日志文件rolling策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>../logs/${day}/dwindex.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 如果按天来回滚，则最大保存时间为30天，30天之前的都将被清理掉 -->
+            <maxHistory>30</maxHistory>
+            <!--<timeBasedFileNamingAndTriggeringPolicy-->
+            <!--class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">-->
+            <!--<maxFileSize>30MB</maxFileSize>-->
+            <!--</timeBasedFileNamingAndTriggeringPolicy>-->
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+        <!--<layout class="ch.qos.logback.classic.PatternLayout">-->
+        <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-->
+        <!-- -%msg%n-->
+        <!--</pattern>-->
+        <!--</layout>-->
+    </appender>
+
+    <appender name="dwlabel"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>../logs/dwlabel.log</File>
+        <!-- 日志文件rolling策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>../logs/${day}/dwlabel.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 如果按天来回滚，则最大保存时间为30天，30天之前的都将被清理掉 -->
+            <maxHistory>30</maxHistory>
+            <!--<timeBasedFileNamingAndTriggeringPolicy-->
+            <!--class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">-->
+            <!--<maxFileSize>30MB</maxFileSize>-->
+            <!--</timeBasedFileNamingAndTriggeringPolicy>-->
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+        <!--<layout class="ch.qos.logback.classic.PatternLayout">-->
+        <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-->
+        <!-- -%msg%n-->
+        <!--</pattern>-->
+        <!--</layout>-->
+    </appender>
+
+    <appender name="labelusercount"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>../logs/labelusercount.log</File>
+        <!-- 日志文件rolling策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>../logs/${day}/labelusercount.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 如果按天来回滚，则最大保存时间为30天，30天之前的都将被清理掉 -->
+            <maxHistory>30</maxHistory>
+            <!--<timeBasedFileNamingAndTriggeringPolicy-->
+            <!--class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">-->
+            <!--<maxFileSize>30MB</maxFileSize>-->
+            <!--</timeBasedFileNamingAndTriggeringPolicy>-->
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+        <!--<layout class="ch.qos.logback.classic.PatternLayout">-->
+        <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36}-->
+        <!-- -%msg%n-->
+        <!--</pattern>-->
+        <!--</layout>-->
+    </appender>
+
+    <appender name="labelbranduser"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>../logs/labelbranduser.log</File>
+        <!-- 日志文件rolling策略 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>../logs/${day}/labelbranduser.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- 如果按天来回滚，则最大保存时间为30天，30天之前的都将被清理掉 -->
+            <maxHistory>30</maxHistory>
+            <!--<timeBasedFileNamingAndTriggeringPolicy-->
+            <!--class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">-->
+            <!--<maxFileSize>30MB</maxFileSize>-->
+            <!--</timeBasedFileNamingAndTriggeringPolicy>-->
+        </rollingPolicy>
+        <!-- 日志输出格式 -->
+        <encoder>
+            <pattern>
+                %d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n
+            </pattern>
+        </encoder>
+    </appender>
+
+    <appender name="rooter" class="ch.qos.logback.core.FileAppender">
+        <file>../logs/${day}/rooter.log</file>
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{5} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.ai" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
+    <logger name="com.ai.tag.ApplicationBoot" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="rerun"/>
+        <appender-ref ref="dwindex"/>
+        <appender-ref ref="dwlabel"/>
+        <appender-ref ref="labelusercount"/>
+        <appender-ref ref="labelbranduser"/>
+    </logger>
+
+    <logger name="com.ai.tag.service.impl.BaseTaskExecution" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="rerun"/>
+        <appender-ref ref="dwindex"/>
+        <appender-ref ref="dwlabel"/>
+        <appender-ref ref="labelusercount"/>
+        <appender-ref ref="labelbranduser"/>
+    </logger>
+
+    <logger name="com.ai.tag.service.impl.CommonServiceImpl" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="rerun"/>
+        <appender-ref ref="dwindex"/>
+        <appender-ref ref="dwlabel"/>
+        <appender-ref ref="labelusercount"/>
+        <appender-ref ref="labelbranduser"/>
+    </logger>
+
+    <logger name="com.ai.tag.service.impl.ResetDealStateBizImpl" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="rerun"/>
+    </logger>
+
+    <logger name="com.ai.tag.service.impl.GatherBaseDatasBizImpl" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="dwindex"/>
+    </logger>
+
+    <logger name="com.ai.tag.service.impl.DealLableDatasServiceImpl" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="dwlabel"/>
+    </logger>
+
+    <logger name="com.ai.tag.service.impl.GatherLabelUsersBizImpl" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="labelusercount"/>
+    </logger>
+
+    <logger name="com.ai.tag.service.impl.LabelDataGenerationBizImpl" additivity="false">
+        <level value="DEBUG"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="labelbranduser"/>
+    </logger>
+
+    <logger name="com.ibatis" level="DEBUG" />
+    <logger name="com.ibatis.common.jdbc.SimpleDataSource" level="DEBUG" />
+    <logger name="com.ibatis.common.jdbc.ScriptRunner" level="DEBUG" />
+    <logger name="com.ibatis.sqlmap.engine.impl.SqlMapClientDelegate" level="DEBUG" />
+    <logger name="java.sql.Connection" level="DEBUG" />
+    <logger name="java.sql.Statement" level="DEBUG" />
+    <logger name="java.sql.PreparedStatement" level="DEBUG" />
+
+    <root level="DEBUG">
+        <appender-ref ref="rooter"/>
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="rerun"/>
+        <appender-ref ref="dwindex"/>
+        <appender-ref ref="dwlabel"/>
+        <appender-ref ref="labelusercount"/>
+        <appender-ref ref="labelbranduser"/>
+    </root>
+</configuration>

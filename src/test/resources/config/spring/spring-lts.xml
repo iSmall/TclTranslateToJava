@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- 
+	<context:component-scan base-package="com.ai."/>
+	
+    <bean id="taskTracker" class="com.github.ltsopensource.spring.TaskTrackerAnnotationFactoryBean" init-method="start">
+        <property name="jobRunnerClass" value="com.github.ltsopensource.example.spring.SpringAnnotationJobRunner"/>
+        <property name="clusterName" value="coc_cluster"/>
+        <property name="registryAddress" value="$[redis_host]"/>
+        <property name="nodeGroup" value="coc_taskTracker"/>
+        <property name="workThreads" value="64"/>
+        <property name="configs">
+            <props>
+                <prop key="job.fail.store">mapdb</prop>
+            </props>
+        </property>
+    </bean>
+
+ -->
+
+
+</beans>

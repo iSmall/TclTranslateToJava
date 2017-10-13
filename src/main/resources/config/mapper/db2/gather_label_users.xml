@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8" ?>    
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ai.tag.dao.IGatherLabelUsersDao">
+
+	<select id="queryPendingDataList" resultType="java.util.HashMap">
+		select T1.TABLE_ID
+               ,value(T1.TABLE_SCHEMA,'-9') TABLE_SCHEMA
+               ,T1.TABLE_NAME
+               ,T2.COLUMN_ID
+               ,T2.COLUMN_NAME
+               ,T4.LABEL_TYPE_ID
+               ,value(trim(T2.DATA_TYPE),'-9') DATA_TYPE
+               ,T3.LABEL_ID
+               ,T1.UPDATE_CYCLE
+               ,T3.COUNT_RULES_CODE
+               ,T8.DATA_STATUS
+         from $[SRC_TABLE_CI_MDA_SYS_TABLE] T1
+         inner join $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T2
+             on T1.TABLE_ID = T2.TABLE_ID
+         inner join $[SRC_TABLE_CI_LABEL_EXT_INFO] T3
+             on T2.COLUMN_ID = T3.COLUMN_ID
+         inner join $[SRC_TABLE_CI_LABEL_INFO] T4
+             on T3.LABEL_ID = T4.LABEL_ID
+         inner join $[SRC_TABLE_CI_APPROVE_STATUS] T5
+             on char(T4.LABEL_ID) = T5.RESOURCE_ID
+         inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T7
+             on T3.COUNT_RULES_CODE = T7.COUNT_RULES_CODE
+         inner join (
+             select LABEL_ID,DATA_STATUS
+             from $[SRC_TABLE_COC_LABEL_STATUS]
+             where DATA_DATE=#{date} and DATA_BATCH <![CDATA[ <> ]]>#{batchNo}
+                 and DATA_STATUS <![CDATA[ <> ]]> $[STATUS_LABEL_RULE_FAIL] and DATA_STATUS <![CDATA[ <> ]]> $[STATUS_LABEL_RULE_RUNNING]
+         )  T8 on T3.LABEL_ID=T8.LABEL_ID
+         where date(T4.EFFEC_TIME) <![CDATA[ <= ]]> date('${effectDate}')
+             and date(T4.FAIL_TIME) <![CDATA[ >]]> date('${effectDate}')
+             and T3.IS_STAT_USER_NUM = 1
+             and T4.LABEL_TYPE_ID in ($[LABEL_TYPE_ONE_DIM],$[LABEL_TYPE_ATTR])
+             and T3.COUNT_RULES_CODE is not null and length(trim(T3.COUNT_RULES_CODE)) != 0
+             and T7.COUNT_RULES_CODE is not null
+             and T7.EFFECTIVE_TIME<![CDATA[ <= ]]>date('${effectDate}')
+             and T7.INVALID_TIME<![CDATA[ > ]]>date('${effectDate}')
+             $[LABEL_EFFEC_RULE_SQL]
+             and T4.UPDATE_CYCLE=${tableCycle} and T2.DATA_TYPE is not null and T2.DATA_TYPE is not null
+         order by T1.TABLE_ID
+	</select>
+	
+	<update id="updateCntLabelStatusFail">
+		UPDATE
+		  $[SRC_TABLE_COC_LABEL_STATUS]
+		SET
+		  DATA_STATUS    =$[STATUS_LABEL_CNT_FAIL] ,
+		  EXCEPTION_DESC = #{errMsg}
+		WHERE
+		  DATA_STATUS  =$[STATUS_LABEL_CNT_RUNNING]
+		AND DATA_DATE  =#{date}
+		AND DATA_BATCH =#{batchNo}
+		AND LABEL_ID   =#{labelId}
+	</update>
+	
+	<update id="updateDstStatus">
+		 UPDATE
+		  $[SRC_TABLE_DST_TABLE_STATUS]
+		SET
+		  STATUS_ID     =#{newStatus} ,
+		  DATA_BATCH    =#{newBatchNo},
+		  pid           =#{pid},
+		  EXCEPTION_DESC=#{desc}
+		WHERE
+		  STATUS_ID    =#{oldStatus}
+		AND DATA_DATE  =#{date}
+		AND TABLE_TYPE =#{tableType}
+		<if test="tableId != null">
+			AND TABLE_ID =#{tableId}
+		</if>
+		<if test="batchNo != null">
+			<choose>
+				<when test="batchEqual"> AND DATA_BATCH = #{batchNo} </when>
+				<otherwise>AND DATA_BATCH <![CDATA[ <> ]]> #{batchNo}</otherwise>
+			</choose>
+		</if>
+	</update>
+	
+	<delete id="deleteTargetTableStatus">
+		DELETE
+		FROM
+		  $[SRC_TABLE_DST_TABLE_STATUS]
+		WHERE
+		  TABLE_ID     =#{tableId}
+		AND TABLE_TYPE =$[TABLE_TYPE_LABEL_CNT_TABLE]
+		AND DATA_DATE  =#{date}
+		AND (STATUS_ID  =$[STATUS_LABEL_DST_SEC] OR STATUS_ID =$[STATUS_LABEL_CNT_DST_SEC])
+	</delete>
+	
+	<insert id="insertDstStatus">
+		insert into $[SRC_TABLE_DST_TABLE_STATUS] (
+           TABLE_ID,
+           DATA_DATE,
+           TABLE_TYPE,
+           STATUS_ID,
+           DATA_BATCH,
+           PID
+        ) values (
+           #{tableId},
+           #{date},
+           #{tableType},
+           #{statusId},
+           #{batchNo},
+           #{pid}
+        )
+	</insert>
+	
+	<select id="getDstCntByStatus" resultType="long">
+		SELECT
+		  COUNT(1)
+		FROM
+		  $[SRC_TABLE_DST_TABLE_STATUS]
+		WHERE
+		  TABLE_ID     =#{tableId}
+		AND STATUS_ID  =#{statusId}
+		AND TABLE_TYPE =#{tableType}
+		AND DATA_DATE  =#{date}
+		<if test="batchNo != null">
+			<choose>
+				<when test="batchEqual"> AND DATA_BATCH = #{batchNo} </when>
+				<otherwise>AND DATA_BATCH <![CDATA[ <> ]]> #{batchNo}</otherwise>
+			</choose>
+		</if>
+	</select>
+	<update id="updateCntTableLabelStatusFail">
+		UPDATE
+		  $[SRC_TABLE_COC_LABEL_STATUS]
+		SET
+		  DATA_STATUS    =$[STATUS_LABEL_CNT_FAIL],
+		  EXCEPTION_DESC =#{errMsg}
+		WHERE
+		  DATA_STATUS  =$[STATUS_LABEL_CNT_RUNNING]
+		AND DATA_DATE  =#{date}
+		AND DATA_BATCH =#{batchNo}
+		AND LABEL_ID  IN
+		  (
+		    SELECT
+		      LABEL_ID
+		    FROM
+		      $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+		    INNER JOIN $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T2
+		    ON
+		      T1.COLUMN_ID=T2.COLUMN_ID
+		    WHERE
+		      T2.TABLE_ID =#{tableId}
+		  )
+	</update>
+	<update id="updateTableLabelStatus">
+		UPDATE
+		  $[SRC_TABLE_COC_LABEL_STATUS]
+		SET
+		  DATA_STATUS      =$[STATUS_LABEL_CNT_RUNNING],
+		  data_batch       =#{batchNo},
+		  DATA_INSERT_TIME =current timestamp,
+		  PID              =#{pid}
+		WHERE
+		  LABEL_ID       IN (${labelId})
+		AND DATA_DATE    =#{date}
+		AND data_batch  <![CDATA[ <> ]]> #{batchNo}
+		AND DATA_STATUS IN ($[STATUS_LABEL_RULE_SEC],$[STATUS_LABEL_CNT_SEC],$[STATUS_LABEL_CNT_FAIL])
+	</update>
+	
+	<insert id="insertTmpTable" parameterType="String">
+		INSERT
+		INTO
+		  ${tableName}
+		  (
+		    op_time ,
+		    city_id ,
+		    BRAND_ID,
+		    VIP_LEVEL_ID
+		    ${fieldName}
+		  )
+		SELECT
+		  DATE('${date}'),
+		  city_id ,
+		  BRAND_ID,
+		  VIP_LEVEL_ID
+		   ${sumStr}
+		FROM
+		  ${srcTableName}
+		GROUP BY
+		  BRAND_ID,
+		  VIP_LEVEL_ID,
+		  city_id
+	</insert>
+	<update id="updateTableLabelStatusCnSec">
+		UPDATE
+		  $[SRC_TABLE_COC_LABEL_STATUS]
+		SET
+		  DATA_STATUS =$[STATUS_LABEL_CNT_SEC],
+		  data_batch  =#{batchNo}
+		WHERE
+		  LABEL_ID     IN (${labelId})
+		AND DATA_DATE  =#{date}
+		AND data_batch =#{batchNo}
+		AND DATA_STATUS=$[STATUS_LABEL_CNT_RUNNING]
+	</update>
+	
+	<update id="updateTableLabelStatusDstSec">
+		UPDATE
+		  $[SRC_TABLE_DST_TABLE_STATUS]
+		SET
+		  STATUS_ID  =$[STATUS_LABEL_CNT_DST_SEC],
+		  DATA_BATCH =#{batchNo}
+		WHERE
+		  TABLE_ID     =#{tableId}
+		AND STATUS_ID <![CDATA[ <> ]]>$[STATUS_LABEL_DST_SEC]
+		AND DATA_DATE  =#{date}
+		AND TABLE_TYPE =$[TABLE_TYPE_LABEL_CNT_TABLE]
+	</update>
+</mapper>

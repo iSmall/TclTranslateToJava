@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8" ?>    
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ai.tag.dao.ILabelDataGenerationDao">
+
+	<update id="updateLabelAsRunning">
+		update $[SRC_TABLE_COC_LABEL_STATUS] P1
+        set P1.DATA_STATUS=$[STATUS_LABEL_CUBE_RUNNING],P1.DATA_BATCH=#{batchNo}
+            ,P1.DATA_INSERT_TIME = current timestamp,P1.PID=#{pid}
+        where P1.DATA_DATE=#{dateCycle} and P1.DATA_BATCH <![CDATA[ <> ]]> #{batchNo}
+            and exists (
+             select 1
+             from       $[SRC_TABLE_CI_LABEL_EXT_INFO]       T1
+             inner join $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T2
+                  on T1.column_id =T2.column_id
+             left join  $[SRC_TABLE_CI_LABEL_INFO]           T3
+                  on T1.label_id =T3.label_id
+             left join  $[SRC_TABLE_CI_MDA_SYS_TABLE]        T4
+                  on T2.table_id =T4.table_id
+             left join  $[SRC_TABLE_CI_LABEL_EXT_INFO]       T5
+                  on T3.parent_id =T5.label_id
+             left join  $[SRC_TABLE_CI_APPROVE_STATUS]       T7
+                  on char(T1.LABEL_ID) = T7.RESOURCE_ID
+             left join (
+                 select
+                    LABEL_ID
+                   ,DATA_STATUS
+                 from $[SRC_TABLE_COC_LABEL_STATUS]
+                 where DATA_DATE=#{dateCycle} and DATA_BATCH <![CDATA[ <> ]]>#{batchNo}
+                     and (DATA_STATUS =$[STATUS_LABEL_CNT_SEC] or DATA_STATUS =$[STATUS_LABEL_RULE_SEC]
+                       or DATA_STATUS = $[STATUS_LABEL_CUBE_SEC] or DATA_STATUS = $[STATUS_LABEL_CUBE_FAIL]
+                       or DATA_STATUS = $[STATUS_LABEL_WAIT_RERUN]
+                     )
+             ) T6 on T3.LABEL_ID=T6.LABEL_ID
+             left join (
+                select
+                    LABEL_ID
+                   ,DATA_STATUS
+                from $[SRC_TABLE_COC_LABEL_STATUS]
+                where DATA_DATE=#{dateCycle} and DATA_BATCH <![CDATA[ <> ]]>#{batchNo}
+                    and (DATA_STATUS =$[STATUS_LABEL_CNT_SEC] or DATA_STATUS =$[STATUS_LABEL_RULE_SEC]
+                        or DATA_STATUS = $[STATUS_LABEL_CUBE_SEC] or DATA_STATUS = $[STATUS_LABEL_CUBE_FAIL]
+                    )
+             ) T8 on T8.LABEL_ID=T5.LABEL_ID
+             where date(T3.EFFEC_TIME)<![CDATA[ <= ]]> date('${opTimeISO}')
+               and date(T3.FAIL_TIME)<![CDATA[ > ]]> date('${opTimeISO}')
+               and T3.UPDATE_CYCLE = #{tableCycle} and T1.is_stat_user_num = 1
+               and T3.LABEL_TYPE_ID in ($[LABEL_TYPE_ONE_DIM],$[LABEL_TYPE_ATTR])
+               and T6.LABEL_ID is not null
+               and (T6.DATA_STATUS =(case when T3.LABEL_TYPE_ID=$[LABEL_TYPE_ONE_DIM] then $[STATUS_LABEL_CNT_SEC]
+                                        else $[STATUS_LABEL_FT_SEC] end )
+                         or T6.DATA_STATUS = $[STATUS_LABEL_CUBE_SEC] or T6.DATA_STATUS = $[STATUS_LABEL_CUBE_FAIL]
+                         or ( T6.DATA_STATUS=$[STATUS_LABEL_WAIT_RERUN] and T8.LABEL_ID is not null)
+               ) and T6.LABEL_ID = P1.LABEL_ID and T2.DATA_TYPE is not null
+        )
+	</update>
+	
+	<insert id="insertSubLabels" parameterType="String">
+		insert into $[SRC_TABLE_COC_LABEL_STATUS] (
+            LABEL_ID
+           ,DATA_DATE
+           ,DATA_STATUS
+           ,DATA_INSERT_TIME
+           ,DATA_BATCH
+           ,PID
+        ) select
+            T1.LABEL_ID,
+            ${dateCycle},
+            $[STATUS_LABEL_CUBE_RUNNING],
+            current timestamp,
+            ${batchNo},
+            ${pid}
+        from       $[SRC_TABLE_CI_LABEL_EXT_INFO]       T1
+        inner join $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T2
+             on T1.column_id =T2.column_id
+        left join  $[SRC_TABLE_CI_LABEL_INFO]           T3
+             on T1.label_id =T3.label_id
+        left join  $[SRC_TABLE_CI_MDA_SYS_TABLE]        T4
+             on T2.table_id =T4.table_id
+        left join  $[SRC_TABLE_CI_LABEL_EXT_INFO]       T5
+             on T3.parent_id =T5.label_id
+        left join  $[SRC_TABLE_CI_APPROVE_STATUS]       T7
+             on char(T1.LABEL_ID) = T7.RESOURCE_ID
+        inner join (
+            select
+               LABEL_ID
+              ,DATA_STATUS
+            from $[SRC_TABLE_COC_LABEL_STATUS]
+            where DATA_DATE=#{dateCycle} and DATA_BATCH<![CDATA[ <> ]]>${batchNo}
+                and (DATA_STATUS =$[STATUS_LABEL_CNT_SEC] or DATA_STATUS =$[STATUS_LABEL_RULE_SEC]
+                  or DATA_STATUS =$[STATUS_LABEL_CUBE_SEC] or DATA_STATUS = $[STATUS_LABEL_CUBE_FAIL]
+                  or DATA_STATUS=$[STATUS_LABEL_FT_SEC])
+        ) T6 on T5.LABEL_ID=T6.LABEL_ID
+        left join (
+            select
+               LABEL_ID
+              ,DATA_STATUS
+            from $[SRC_TABLE_COC_LABEL_STATUS]
+            where DATA_DATE=#{dateCycle}
+        ) T8 on T1.LABEL_ID=T8.LABEL_ID
+          where date(T3.EFFEC_TIME)<![CDATA[ <= ]]>date('${opTimeISO}')
+          and date(T3.FAIL_TIME)<![CDATA[ > ]]>date('${opTimeISO}')
+          and T3.UPDATE_CYCLE =  #{tableCycle} and T1.is_stat_user_num = 1
+          and T3.LABEL_TYPE_ID in ($[LABEL_TYPE_ONE_DIM],$[LABEL_TYPE_ATTR])
+          and T8.LABEL_ID is null and T6.LABEL_ID is not null
+          and T2.DATA_TYPE is not null
+          $[LABEL_EFFEC_RULE_SQL]
+	</insert>
+	
+	<select id="getRunningLabelList" resultType="java.util.HashMap">
+		select T1.label_id
+              ,T2.table_id
+              ,T4.table_name
+              ,T2.column_name
+              ,T3.label_name
+              ,T3.parent_id
+              ,T6.column_name
+              ,T3.update_cycle
+              ,T1.label_level
+              ,T1.is_stat_user_num
+              ,T1.attr_val
+              ,T3.label_type_id
+              ,value(T4.TABLE_SCHEMA,'-9') table_schema
+              ,T9.data_status
+          from       $[SRC_TABLE_CI_LABEL_EXT_INFO]       T1
+          inner join $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T2
+               on T1.column_id =T2.column_id
+          left join  $[SRC_TABLE_CI_LABEL_INFO]           T3
+               on T1.label_id =T3.label_id
+          left join  $[SRC_TABLE_CI_MDA_SYS_TABLE]        T4
+               on T2.table_id =T4.table_id
+          left join  $[SRC_TABLE_CI_LABEL_EXT_INFO]       T5
+               on T3.parent_id =T5.label_id
+          left join  $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T6
+               on T5.column_id =T6.column_id
+          left join  $[SRC_TABLE_CI_APPROVE_STATUS]       T7
+               on char(T1.LABEL_ID) = T7.RESOURCE_ID
+          inner join (
+              select LABEL_ID,DATA_STATUS
+              from $[SRC_TABLE_COC_LABEL_STATUS]
+              where DATA_DATE=#{dateCycle} and DATA_BATCH=${batchNo} and DATA_STATUS=$[STATUS_LABEL_CUBE_RUNNING]
+          ) T9 on T3.LABEL_ID=T9.LABEL_ID
+         order by T3.label_type_id
+	</select>
+	
+	<insert id="insertDstStatus">
+		insert into $[SRC_TABLE_DST_TABLE_STATUS] (
+           TABLE_ID,
+           DATA_DATE,
+           TABLE_TYPE,
+           STATUS_ID,
+           DATA_BATCH,
+           PID
+        ) values (
+           #{tableId},
+           #{date},
+           #{tableType},
+           #{statusId},
+           #{batchNo},
+           #{pid}
+        )
+	</insert>
+	
+	<insert id="insetDataIntoNewTempTable" parameterType="String">
+		INSERT INTO ${dstTableName} select * from ${srcTableName} where DATA_DATE >= ${date}
+	</insert>
+	
+	<select id="getUserCount" parameterType="String" resultType="Long">
+		 select count(1) from ${tableName} t1
+	</select>
+	
+	<insert id="insertTargetTable" parameterType="String">
+		 INSERT INTO ${tableName}(
+                   DATA_DATE
+                  ,LABEL_ID
+                  ,CITY_ID
+                  ,BRAND_ID
+                  ,VIP_LEVEL_ID
+                  ,CUSTOM_NUM
+                  ,RING_NUM
+                  ,PROPORTION
+                  )
+            SELECT  ${dateCycle}     AS DATA_DATE
+                   ,${lableId}     AS LABEL_ID
+                   ,$[DIM_COL_NVL_SELECT]
+                   ,${sumStr}          AS CUSTOM_NUM
+                   ,0                  AS RING_NUM
+                   ,0                  AS PROPORTION
+              ${fromStr}
+             GROUP BY $[DIM_COL_GROUP_SET]
+            HAVING ($[DIM_COL_HAVING])
+	</insert>
+	
+	<delete id="deleteHistoryData" parameterType="String">
+		DELETE FROM ${tableName}  WHERE LABEL_ID in (${labelIdList}) AND DATA_DATE =${dateCycle}
+	</delete>
+	
+	<insert id="insertTargetTable2" parameterType="String">
+		INSERT INTO ${destTableName}(
+               DATA_DATE
+              ,LABEL_ID
+              ,CITY_ID
+              ,BRAND_ID
+              ,VIP_LEVEL_ID
+              ,CUSTOM_NUM
+              ,RING_NUM
+              ,PROPORTION
+              )
+        SELECT  t1.DATA_DATE                                    DATA_DATE
+               ,t1.LABEL_ID                                     LABEL_ID
+               ,t1.CITY_ID                                      CITY_ID
+               ,t1.BRAND_ID                                     BRAND_ID
+               ,t1.VIP_LEVEL_ID                                 VIP_LEVEL_ID
+               ,t1.CUSTOM_NUM                                   CUSTOM_NUM
+               ,t1.CUSTOM_NUM - value(t2.CUSTOM_NUM,0)          RING_NUM
+               ,t1.CUSTOM_NUM * 1.0 / ${totalUserCount}         PROPORTION
+          FROM ${srcTableName} t1
+          LEFT JOIN ${joinTableName} t2
+                 ON t1.LABEL_ID = t2.LABEL_ID AND t1.CITY_ID = t2.CITY_ID
+                AND t1.BRAND_ID = t2.BRAND_ID AND t1.VIP_LEVEL_ID = t2.VIP_LEVEL_ID
+                AND t2.DATA_DATE = ${lastCycle}
+	</insert>
+	
+	<update id="updateDataCycle" parameterType="String">
+		${sql}
+	</update>
+	
+	<update id="updateLabelDataStatus" parameterType="java.util.List">
+		UPDATE
+		    $[SRC_TABLE_CI_LABEL_INFO]
+		SET
+		    DATA_STATUS_ID = 2
+		WHERE 1=0
+			OR label_id IN
+		    <foreach collection="labelIdList" item="labelId" index="index" open="(" close=")" separator=",">
+	            #{labelId}
+	        </foreach>
+	</update>
+	
+	<update id="updateLabelStatus" parameterType="java.util.List">
+		UPDATE
+		    $[SRC_TABLE_COC_LABEL_STATUS] P1
+		SET
+		    DATA_STATUS = $[STATUS_LABEL_FT_SEC]
+		WHERE
+		    DATA_DATE=#{dateCycle}
+		AND P1.DATA_BATCH=#{batchNo}
+		AND ( 1=0 
+			OR label_id IN
+			<foreach collection="labelIdList" item="labelId" index="index" open="(" close=")" separator=",">
+	            #{labelId}
+	        </foreach>
+			)
+	</update>
+	<delete id="deleteDstTableStatus">
+		delete from $[SRC_TABLE_DST_TABLE_STATUS]
+        where TABLE_ID='CI_LABEL_STAT' and DATA_BATCH = #{batchNo} and STATUS_ID = $[STATUS_LABEL_STAT_RUNNING]
+	</delete>
+</mapper>

@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8" ?>    
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ai.tag.dao.IBaseDao">
+
+	<select id="getNextSequence" resultType="java.lang.Long">
+		select nextval for $[SCHEMA_FT].S_label_index_batch from SYSIBM.SYSDUMMY1
+	</select>
+
+
+	<select id="isTableExists" resultType="boolean">
+		SELECT
+		  COUNT(*)
+		FROM
+		  syscat.indexes
+		WHERE
+		  INDSCHEMA = #{schema}
+		AND indname = #{indexName}
+		WITH ur
+	</select>
+
+	<select id="doesTableExist" resultType="boolean">
+		SELECT
+		  COUNT(*)
+		FROM
+		  syscat.tables
+		WHERE
+		    TABSCHEMA = #{schema}
+		AND TABNAME = #{tableName}
+		WITH ur
+	</select>
+
+	<select id="doesIndexExist" resultType="boolean">
+		SELECT
+		COUNT(*)
+		FROM
+		syscat.indexes
+		WHERE
+		INDSCHEMA = #{schema}
+		AND INDNAME = #{indexName}
+		WITH UR
+	</select>
+
+	<select id="isEmptyTable" resultType="boolean" parameterType="String">
+		SELECT
+		COUNT(1)
+		FROM
+		(
+		SELECT
+		1
+		FROM
+		${tableName}
+		FETCH
+		FIRST 1 rows only
+		)
+		P
+	</select>
+
+
+	<delete id="truncateTable" parameterType="String">
+		ALTER TABLE ${tableName} activate NOT logged
+		initially WITH empty TABLE
+	</delete>
+
+	<delete id="dropTable" parameterType="String">
+		drop table ${tableName}
+	</delete>
+
+	<update id="createTable" parameterType="String">
+		CREATE TABLE
+	    ${tableName}
+	    (
+	        ${fields}
+	    )
+	    <if test="tableSpace != null and tableSpace !=''">
+	    	 in ${tableSpace}
+	    </if>
+	    <if test="distKey != null and distKey !=''">
+	    	distribute by hash ( ${distKey} )
+	    </if>
+	    <if test="indx != null and indx !=''">
+	    	index in ${indx}
+	    </if>
+	    <if test="partKey != null and partKey !='' and partKey != 0">
+	    	partition by ${partKey}
+	    </if>
+	    compress yes 
+	    NOT LOGGED INITIALLY
+	</update>
+	
+	<update id="createTableFromTempTable" parameterType="String">
+		CREATE TABLE ${tableName} like ${tempTable}
+	    <if test="tableSpace != null and tableSpace !=''">
+	    	 in ${tableSpace}
+	    </if>
+	    <if test="distKey != null and distKey !=''">
+	    	distribute by hash ( ${distKey} )
+	    </if>
+	    <if test="indx != null and indx !=''">
+	    	index in ${indx}
+	    </if>
+	    <if test="partKey != null and partKey !=''">
+	    	partition by ${partKey}
+	    </if>
+	    compress yes 
+	    NOT LOGGED INITIALLY
+	</update>
+	
+	<insert id="insertTempTableData">
+		insert into ${t1DstTable} ${insertSql}
+	</insert>
+	
+	<update id="dbDisableLog" parameterType="String">
+		alter table ${tableName} activate not logged initially
+	</update>
+	
+	<update id="renameTable" parameterType="String">
+		rename table ${schema}.${oldTable} to ${newTable}
+	</update>
+	
+	<update id="createIndex"  parameterType="String">
+		CREATE INDEX ${indexName} ON ${dstTable} (${distKey})
+	</update>
+	
+	<update id="runstatsTable">
+		call Sysproc.admin_cmd('runstats on table ${tableName} with distribution and detailed indexes all')
+	</update>
+	
+	<delete id="dropIndex" parameterType="String">
+		 DROP index ${indexName}
+	</delete>
+	
+	
+	<update id="reorgTable" statementType="STATEMENT">
+		call Sysproc.admin_cmd('REORG TABLE #{schema}.#{tableName}');
+	</update>
+	
+</mapper>

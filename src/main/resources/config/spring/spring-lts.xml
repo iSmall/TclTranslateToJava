@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd">
+
+
+    <context:component-scan base-package="com.ai.tag.lts"></context:component-scan>
+
+    <!--&lt;!&ndash; 暴露节点 &ndash;&gt;-->
+    <!--<bean id="taskTracker" class="com.github.ltsopensource.spring.TaskTrackerAnnotationFactoryBean" init-method="start">-->
+        <!--&lt;!&ndash; 任务运行类 &ndash;&gt;-->
+        <!--<property name="jobRunnerClass" value="com.ai.tag.lts.taskTracker.TaskTracker"/>-->
+        <!--&lt;!&ndash; 集群名 &ndash;&gt;-->
+        <!--<property name="clusterName" value="coc_cluster"/>-->
+        <!--&lt;!&ndash; zooKeeper地址 &ndash;&gt;-->
+        <!--<property name="registryAddress" value="$[register_center]"/>-->
+        <!--&lt;!&ndash; 节点组名称，在部署集群时同一个系统需要统一 &ndash;&gt;-->
+        <!--<property name="nodeGroup" value="coc_taskTracker"/>-->
+        <!--&lt;!&ndash; 工作线程数，不小于本系统最大任务数 &ndash;&gt;-->
+        <!--<property name="workThreads" value="64"/>-->
+        <!--<property name="configs">-->
+            <!--<props>-->
+                <!--<prop key="job.fail.store">mapdb</prop>-->
+            <!--</props>-->
+        <!--</property>-->
+    <!--</bean>-->
+
+
+
+
+</beans>

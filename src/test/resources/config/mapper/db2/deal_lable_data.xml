@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8" ?>    
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ai.tag.dao.IDealLabelDatasDao">
+
+	<select id="getTagsList" resultType="java.util.Map">
+		select T1.TABLE_ID
+                  ,value(T1.TABLE_SCHEMA,'-9')    TABLE_SCHEMA
+                  ,T1.TABLE_NAME
+                  ,T2.COLUMN_ID
+                  ,T2.COLUMN_NAME
+                  ,T4.LABEL_TYPE_ID
+                  ,value(trim(T2.DATA_TYPE),'-9')    DATA_TYPE
+                  ,T3.LABEL_ID
+                  ,T1.UPDATE_CYCLE
+                  ,T3.COUNT_RULES_CODE
+                  ,T3.ATTR_VAL
+                  ,trim(value(T7.DEPEND_INDEX,'-9'))   DEPEND_INDEX
+                  ,value(T7.COUNT_RULES,'-9')    COUNT_RULES
+                  ,value(T7.COUNT_RULES_CODE,'-9')    COUNT_RULES_CODE
+                  ,value(T8.DATA_STATUS,-9)   DATA_STATUS
+                  ,T4.DATA_STATUS_ID
+            from $[SRC_TABLE_CI_MDA_SYS_TABLE] T1
+            inner join $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T2
+                on T1.TABLE_ID = T2.TABLE_ID
+            inner join $[SRC_TABLE_CI_LABEL_EXT_INFO] T3
+                on T2.COLUMN_ID = T3.COLUMN_ID
+            inner join $[SRC_TABLE_CI_LABEL_INFO] T4
+                on T3.LABEL_ID = T4.LABEL_ID
+            inner join $[SRC_TABLE_CI_APPROVE_STATUS] T5
+                on char(T4.LABEL_ID) = T5.RESOURCE_ID
+            inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T7
+                on T3.COUNT_RULES_CODE=T7.COUNT_RULES_CODE
+            left join (
+                select LABEL_ID , DATA_STATUS
+                from $[SRC_TABLE_COC_LABEL_STATUS]
+                where DATA_DATE='${dataStatusDate}'
+            ) T8 on T3.LABEL_ID=T8.LABEL_ID
+            where date( T4.EFFEC_TIME) <![CDATA[ <= ]]> date('${dataDateIso}')
+                and date( T4.FAIL_TIME) <![CDATA[ > ]]> date('${dataDateIso}')
+                and T1.TABLE_TYPE=$[TABLE_TYPE_USER_LABEL]
+                and ( ( ( T4.LABEL_TYPE_ID = $[LABEL_TYPE_ONE_DIM] or T4.LABEL_TYPE_ID = $[LABEL_TYPE_ATTR] )
+                            and T3.COUNT_RULES_CODE is not null and length(trim(T3.COUNT_RULES_CODE)) <![CDATA[ <> ]]> 0
+                      ) or ( T4.LABEL_TYPE_ID <![CDATA[ <> ]]> $[LABEL_TYPE_ONE_DIM] and T4.LABEL_TYPE_ID <![CDATA[ <> ]]> $[LABEL_TYPE_ATTR] )
+                    )
+                and T7.EFFECTIVE_TIME <![CDATA[ <= ]]> date('${dataDateIso}')
+                and T7.INVALID_TIME <![CDATA[> ]]> date('${dataDateIso}')
+                and ( T8.LABEL_ID is null or (T8.LABEL_ID is not null and T8.DATA_STATUS =$[STATUS_LABEL_WAIT_RERUN]))
+                $[LABEL_EFFEC_RULE_SQL]
+                ${tabListStr}
+                and T4.UPDATE_CYCLE=${tableCycle} and T2.DATA_TYPE is not null and T2.DATA_TYPE is not null
+            order by T1.TABLE_ID
+	</select>
+	
+	
+	<select id="getSonTagsRules" resultType="java.util.HashMap">
+		
+		 with RES ( LABEL_ID,LABEL_NAME,PARENT_ID,EFFEC_TIME,FAIL_TIME) as (
+                        select
+                             LABEL_ID
+                            ,LABEL_NAME
+                            ,PARENT_ID
+                            ,EFFEC_TIME
+                            ,FAIL_TIME
+                        from $[SRC_TABLE_CI_LABEL_INFO] ROOT
+                            where ROOT.LABEL_ID=${labelId}
+                        union all
+                        select
+                             CHILD.LABEL_ID
+                            ,CHILD.LABEL_NAME
+                            ,CHILD.PARENT_ID
+                            ,CHILD.EFFEC_TIME
+                            ,CHILD.FAIL_TIME
+                        from $[SRC_TABLE_CI_LABEL_INFO] CHILD , RES PARENT
+                            where CHILD.PARENT_ID = PARENT.LABEL_ID and CHILD.LABEL_TYPE_ID = $[LABEL_TYPE_ONE_DIM]
+                    ) select
+                        RES.LABEL_ID
+                       ,T2.COUNT_RULES_CODE
+                       ,T4.DEPEND_INDEX
+                       ,T4.COUNT_RULES
+                    from RES
+                    inner join $[SRC_TABLE_CI_LABEL_EXT_INFO] T2
+                        on RES.LABEL_ID = T2.LABEL_ID
+                    inner join $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T3
+                        on T2.COLUMN_ID = T3.COLUMN_ID
+                    inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T4
+                        on T2.COUNT_RULES_CODE = T4.COUNT_RULES_CODE
+                    where date(RES.EFFEC_TIME) <![CDATA[ <= ]]>
+                        date('${dataDateIso}')
+                        and date(RES.FAIL_TIME) <![CDATA[ > ]]>
+                        date('${dataDateIso}')
+                        and T2.COUNT_RULES_CODE <![CDATA[ <> ]]> '$[RULE_CODE_PARENT]'
+                        and T4.EFFECTIVE_TIME <![CDATA[ <= ]]> date('${dataDateIso}')
+                        and T4.INVALID_TIME <![CDATA[ > ]]>date('${dataDateIso}')
+                    order by PARENT_ID
+	</select>
+	
+	
+	<update id="updateTagStatusTable">
+	
+		update $[SRC_TABLE_COC_LABEL_STATUS]
+	                set DATA_STATUS=$[STATUS_LABEL_RULE_RUNNING] , DATA_BATCH=${batchNo} , PID=${threadId}
+	                where LABEL_ID=${labelId}  and DATA_DATE='${date}'
+	                    and DATA_STATUS=$[STATUS_LABEL_WAIT_RERUN] and exists (
+	                        select 1
+	                        from SYSIBM.SYSDUMMY1 P1
+	                        where ${cnt} = (
+	                            select count(1) from $[SRC_TABLE_COC_INDEX_STATUS] T1
+	                            where T1.INDEX_CODE in ('${sql}')
+	                                and T1.DATA_DATE='${date}'
+	                                and T1.DATA_STATUS=$[STATUS_INDEX_SEC]
+	                        )
+	                    )
+	
+	</update>
+	
+	
+	<insert id="insertTagStatusTable">
+		insert into $[SRC_TABLE_COC_LABEL_STATUS] (
+	                         LABEL_ID
+	                        ,DATA_DATE
+	                        ,DATA_STATUS
+	                        ,DATA_INSERT_TIME
+	                        ,DATA_BATCH
+	                        ,PID
+	                    ) select
+	                         ${labelId}                        LABEL_ID
+	                       ,'${date}'                     DATA_DATE
+	                       ,$[STATUS_LABEL_RULE_RUNNING]       DATA_STATUS
+	                       ,current timestamp   DATA_INSERT_TIME
+	                       ,${batchNo}  DATA_BATCH
+	                       ,${threadId} PID
+	                    from SYSIBM.SYSDUMMY1 P1
+	                    where ${cnt} = (
+	                        select count(1) from $[SRC_TABLE_COC_INDEX_STATUS] T1
+	                        where T1.INDEX_CODE in ('${sql}')
+	                            and T1.DATA_DATE='${date}'
+	                            and T1.DATA_STATUS=$[STATUS_INDEX_SEC]
+	                    )
+	
+	
+	</insert>
+	
+	<select id="getTotalTagsStatus" resultType="Integer">
+	
+		select count(1) from $[SRC_TABLE_COC_LABEL_STATUS] T1
+            where T1.LABEL_ID = ${labelId} and T1.DATA_STATUS=$[STATUS_LABEL_RULE_RUNNING]
+                and T1.DATA_DATE='${date}' and DATA_BATCH=${batchNo}
+	</select>
+	
+	<update id="updateTagsStatusWithErrorMsg">
+		 update $[SRC_TABLE_COC_LABEL_STATUS]
+        set DATA_STATUS=$[STATUS_LABEL_RULE_FAIL] , EXCEPTION_DESC = '${errorMsg}'
+        where DATA_STATUS=$[STATUS_LABEL_RULE_RUNNING] and DATA_DATE='${date}'
+            and DATA_BATCH = ${batchNo}
+            and (${sql})	
+	</update>
+	
+	<update id="recoverTagsStataus">
+		update $[SRC_TABLE_DST_TABLE_STATUS]
+            set STATUS_ID=$[STATUS_IDX_DST_SEC] , DATA_BATCH=${batchNo}
+            where STATUS_ID=$[STATUS_IDX_DST_USING] and TABLE_TYPE=$[TABLE_TYPE_INDEX_TABLE]
+                and DATA_BATCH=${batchNo}	
+	</update>
+	
+	<select id="getSrcTableByTagRules" resultType="java.util.HashMap">
+		select
+                  T1.TARGET_TABLE_CODE
+                 ,T1.TARGET_TABLE_NAME
+                 ,T1.TABLE_DATA_CYCLE
+                 ,T2.INDEX_CODE
+                 ,row_number() over(
+                      partition by T1.TARGET_TABLE_NAME,T1.TABLE_DATA_CYCLE
+                      order by t1.TARGET_TABLE_NAME DESC
+                  )    RANK
+            from $[SRC_TABLE_DIM_COC_INDEX_MODEL_TABLE_CONF] T1
+            inner join $[SRC_TABLE_DIM_COC_INDEX_INFO] T2
+            on T1.TARGET_TABLE_CODE=T2.TARGET_TABLE_CODE
+            where T2.INDEX_CODE IN (
+                  ${sql}
+                  )
+            and T1.EFFECTIVE_TIME<![CDATA[ <= ]]>  date('${date}')
+            and T1.INVALID_TIME<![CDATA[ > ]]>  date('${date}')
+            and T2.EFFECTIVE_TIME<![CDATA[ <= ]]>  date('${date}')
+            and T2.INVALID_TIME<![CDATA[ > ]]>  date('${date}')
+            order by T1.TARGET_TABLE_CODE	
+	</select>
+	
+	<update id="updateTagsStatus">
+	
+		update $[SRC_TABLE_DST_TABLE_STATUS]
+            set STATUS_ID=$[STATUS_IDX_DST_USING] , DATA_BATCH=${batchNo} , pid =${threadId}
+            where STATUS_ID=$[STATUS_IDX_DST_SEC] and TABLE_TYPE=$[TABLE_TYPE_INDEX_TABLE]
+                and (${sql})
+	
+	</update>
+	
+	<update id="updateTagStatusFail">
+		
+		 update $[SRC_TABLE_COC_LABEL_STATUS]
+        set DATA_STATUS=$[STATUS_LABEL_RULE_FAIL] , EXCEPTION_DESC = '${errorMsg}'
+        where DATA_STATUS=$[STATUS_LABEL_RULE_RUNNING] and DATA_DATE='${date}'
+            and DATA_BATCH = ${batchNo} and LABEL_ID in (
+                select LABEL_ID
+                from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                inner join $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T2
+                    on T1.COLUMN_ID=T2.COLUMN_ID
+                where T2.TABLE_ID = ${tableId}
+            )
+			
+	</update>
+	
+	<select id="getTablesStatus" resultType="Integer">
+		select COUNT(1) from $[SRC_TABLE_DST_TABLE_STATUS] T1
+            where STATUS_ID <![CDATA[ <> ]]>  $[STATUS_IDX_DST_USING] and TABLE_TYPE=$[TABLE_TYPE_INDEX_TABLE]
+                and DATA_BATCH=${batchNo} and (${sql})	
+	</select>
+	
+	
+	<select id="getTargetStatus" resultType="Integer">
+		select STATUS_ID from $[SRC_TABLE_DST_TABLE_STATUS] T1
+            where TABLE_ID= '${tableId}'
+                and DATA_DATE='${date}' and TABLE_TYPE = $[TABLE_TYPE_LABEL_TABLE]
+	
+	</select>
+	
+	<select id="getCurrentWidthTable" resultType="Integer" >
+	
+		 select COUNT(1) from $[SRC_TABLE_DST_TABLE_STATUS] T1
+                where TABLE_ID= '${tableId}' and STATUS_ID=$[STATUS_LABEL_DST_RUNNING] and DATA_BATCH = ${batchNo}
+                    and DATA_DATE='${date}' and TABLE_TYPE = $[TABLE_TYPE_LABEL_TABLE]
+	</select>
+	
+	<insert id="insertIntoTempTable" statementType="STATEMENT">
+		${sql}
+	</insert>
+	
+	<select id="getColsByDictTab" resultType="java.util.HashMap">
+		select
+                COLNAME
+               ,value(TYPENAME,'$[FLAG_NO_NULL]') TYPENAMW
+               ,case when TYPENAME='DOUBLE' or TYPENAME='REAL'
+                  or TYPENAME='BIGINT' or TYPENAME='SMALLINT' or TYPENAME='INTEGER'
+                  or TYPENAME='DATE' or TYPENAME='TIME' or TYPENAME='TIMESTAMP'
+                  or TYPENAME='XML' or TYPENAME='LONG VARCHAR' or TYPENAME='LONG VARGRAPHIC'
+                then $[FLAG_NO_NULL]
+                else value(LENGTH,$[FLAG_NO_NULL]) end TYPENAME_ONE
+               ,case when TYPENAME='DOUBLE' or TYPENAME='REAL'
+                  or TYPENAME='BIGINT' or TYPENAME='SMALLINT' or TYPENAME='INTEGER'
+                  or TYPENAME='BLOB' or TYPENAME='CLOB' or TYPENAME='XML'
+                  or TYPENAME='DATE' or TYPENAME='TIME' or TYPENAME='TIMESTAMP'
+                  or TYPENAME='CHARACTER' or TYPENAME='VARCHAR' or TYPENAME='LONG VARCHAR' or TYPENAME='LONG VARGRAPHIC'
+                then $[FLAG_NO_NULL]
+                else value(scale,$[FLAG_NO_NULL]) end TYPENAME_TWO
+            from SYSCAT.COLUMNS
+            where TABSCHEMA='${schema}' and TABNAME='${tableName}'
+                 and (${sql})
+	
+	</select>
+	
+	<update id="updateTagDataStatusOk">
+		update $[SRC_TABLE_CI_LABEL_INFO] set DATA_STATUS_ID = 2 where ${sql}
+	</update>
+	
+	<update id="editTagStatus">
+		update $[SRC_TABLE_COC_LABEL_STATUS]
+                set DATA_STATUS=$[STATUS_LABEL_FT_SEC]
+                where DATA_STATUS=$[STATUS_LABEL_RULE_RUNNING] and DATA_DATE='${date}'
+                    and DATA_BATCH = ${batchNo} and (${sql})	
+	</update>
+	
+	<update id="updateTagStatus">
+		update $[SRC_TABLE_COC_LABEL_STATUS]
+                set DATA_STATUS=$[STATUS_LABEL_RULE_SEC]
+                where DATA_STATUS=$[STATUS_LABEL_RULE_RUNNING] and DATA_DATE='${date}'
+                    and DATA_BATCH = ${batchNo} and  LABEL_ID in (${sql})	
+	</update>
+	
+	<update id="recoverTagStatusTable">
+		update $[SRC_TABLE_DST_TABLE_STATUS]
+            set STATUS_ID=$[STATUS_IDX_DST_SEC], DATA_BATCH=${batchNo}
+            where STATUS_ID=$[STATUS_IDX_DST_USING] and TABLE_TYPE=$[TABLE_TYPE_INDEX_TABLE]
+                and (${sql}) and DATA_DATE='${date}'
+	</update>
+	
+	
+	<update id="recoverTagStatusTableOk">
+		 update $[SRC_TABLE_DST_TABLE_STATUS]
+        set STATUS_ID=$[STATUS_IDX_DST_SEC] , DATA_BATCH=${batchNo}
+        where STATUS_ID=$[STATUS_IDX_DST_USING] and TABLE_TYPE=$[TABLE_TYPE_INDEX_TABLE]
+            and DATA_BATCH=${batchNo} and DATA_DATE='${date}'
+	</update>
+	
+	<update id="updateDataCycleDate">
+		UPDATE $[SRC_TABLE_CI_NEWEST_LABEL_DATE] SET DAY_NEWEST_DATE ='${date}',DAY_NEWEST_STATUS =0 where DAY_NEWEST_DATE <![CDATA[ <= ]]> '${date}'
+	</update>
+	
+	
+	
+	
+
+
+</mapper>

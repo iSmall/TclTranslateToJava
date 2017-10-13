@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8" ?>    
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ai.tag.dao.IDwIndexDao">
+
+	<select id="getReRunDataSource" resultType="string">
+		
+		select INDEX_CODE
+            from $[SRC_TABLE_DIM_COC_INDEX_INFO]
+            where DATA_SRC_CODE in ('${srcTables}')
+		
+	</select>
+	
+	<delete id="deleteReRunTagStatus">
+		 delete from $[SRC_TABLE_COC_INDEX_STATUS]
+         where INDEX_CODE in (${indexCode}) and DATA_DATE=${date}
+         and DATA_STATUS <![CDATA[ <> ]]> $[STATUS_INDEX_RUNNING]
+	</delete>
+	
+	<select id="queryReRunTagStatus" resultType="Integer">
+		select count(1) from $[SRC_TABLE_COC_INDEX_STATUS]
+                where INDEX_CODE in ('${indexCode}') and DATA_DATE='${date}'
+	</select>
+	
+	<update id="updateReRunTagStatus">
+	
+	update $[SRC_TABLE_COC_LABEL_STATUS] P1
+                set P1.DATA_STATUS=$[STATUS_LABEL_WAIT_RERUN] , P1.DATA_BATCH=${batchNo}
+                where DATA_DATE='${date}' and DATA_STATUS <![CDATA[ <> ]]> $[STATUS_LABEL_RULE_RUNNING]
+                    and DATA_STATUS <![CDATA[ <> ]]> $[STATUS_LABEL_CNT_RUNNING] and DATA_STATUS <![CDATA[ <> ]]> $[STATUS_LABEL_CUBE_RUNNING]
+                    and ( P1.LABEL_ID in (
+                            select T1.LABEL_ID
+                            from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                            inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                            where ${idxStrs}
+                        ) or P1.LABEL_ID in (
+                            select T3.LABEL_ID
+                            from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                            inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                            left join $[SRC_TABLE_CI_LABEL_INFO] T3
+                                on T3.PARENT_ID=T1.LABEL_ID
+                            where ${idxStrs} and T3.LABEL_TYPE_ID=$[LABEL_TYPE_ATTR]
+                        ) or P1.LABEL_ID in (select T4.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T4
+                                            left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T5
+                                            on T4.LABEL_ID=T5.LABEL_ID
+                                            left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T6
+                                            on T5.COUNT_RULES_CODE = T6.COUNT_RULES_CODE
+                                            where T4.LABEL_ID in (select T3.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T3 where T3.LABEL_ID in (
+                                                                       select T1.LABEL_ID
+                                                                       from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                                                                       inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                                                       on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                                                                       where ${idxStrs}
+                                                                   ))
+                                            and T5.COUNT_RULES_CODE = 'R_00000'
+                        ) or P1.LABEL_ID in (select T8.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T8
+                                             left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T9
+                                             on T8.LABEL_ID=T9.LABEL_ID
+                                             left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T10
+                                             on T9.COUNT_RULES_CODE = T10.COUNT_RULES_CODE
+                                             where T8.LABEL_ID in(
+                                                  select T7.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T7 where T7.LABEL_ID in (
+                                                             select T4.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T4
+                                                             left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T5
+                                                             on T4.LABEL_ID=T5.LABEL_ID
+                                                             left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T6
+                                                             on T5.COUNT_RULES_CODE = T6.COUNT_RULES_CODE
+                                                             where T4.LABEL_ID in (select T3.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T3 where T3.LABEL_ID in (
+                                                                                        select T1.LABEL_ID
+                                                                                        from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                                                                                        inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                                                                        on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                                                                                        where ${idxStrs}
+                                                                                    ))
+                                                             and T5.COUNT_RULES_CODE = 'R_00000'
+                                                             ))
+                                             and T9.COUNT_RULES_CODE = 'R_00000'
+                        ) or P1.LABEL_ID in (
+                                             select T12.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T12
+                                             left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T13
+                                             on T12.LABEL_ID=T13.LABEL_ID
+                                             left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T14
+                                             on T13.COUNT_RULES_CODE = T14.COUNT_RULES_CODE
+                                             where T12.LABEL_ID in(
+                                                  select T11.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T11 where T11.LABEL_ID in(
+                                                          select T8.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T8
+                                                          left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T9
+                                                          on T8.LABEL_ID=T9.LABEL_ID
+                                                          left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T10
+                                                          on T9.COUNT_RULES_CODE = T10.COUNT_RULES_CODE
+                                                          where T8.LABEL_ID in(
+                                                               select T7.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T7 where T7.LABEL_ID in (
+                                                                          select T4.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T4
+                                                                          left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T5
+                                                                          on T4.LABEL_ID=T5.LABEL_ID
+                                                                          left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T6
+                                                                          on T5.COUNT_RULES_CODE = T6.COUNT_RULES_CODE
+                                                                          where T4.LABEL_ID in (select T3.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T3 where T3.LABEL_ID in (
+                                                                                                     select T1.LABEL_ID
+                                                                                                     from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                                                                                                     inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                                                                                     on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                                                                                                     where ${idxStrs}
+                                                                                                 ))
+                                                                          and T5.COUNT_RULES_CODE = 'R_00000'
+                                                                          ))
+                                                          and T9.COUNT_RULES_CODE = 'R_00000'
+                                                           ))
+                                             and T13.COUNT_RULES_CODE = 'R_00000'
+                        )
+                    )
+	
+	</update>
+	
+	<select id="selectLabeStatus" resultType="Integer">
+		
+		select count(1)
+                from $[SRC_TABLE_COC_LABEL_STATUS]
+                where DATA_DATE='${date}' and DATA_STATUS <![CDATA[ <> ]]> $[STATUS_LABEL_WAIT_RERUN]
+                    and ( LABEL_ID in (
+                            select T1.LABEL_ID
+                            from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                            inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                            where ${idxStrs}
+                        ) or LABEL_ID in (
+                            select T3.LABEL_ID
+                            from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                            inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                            left join $[SRC_TABLE_CI_LABEL_INFO] T3
+                                on T3.PARENT_ID=T1.LABEL_ID
+                            where ${idxStrs} and T3.LABEL_TYPE_ID=$[LABEL_TYPE_ATTR]
+                        )or LABEL_ID in (select T4.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T4
+                                            left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T5
+                                            on T4.LABEL_ID=T5.LABEL_ID
+                                            left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T6
+                                            on T5.COUNT_RULES_CODE = T6.COUNT_RULES_CODE
+                                            where T4.LABEL_ID in (select T3.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T3 where T3.LABEL_ID in (
+                                                                       select T1.LABEL_ID
+                                                                       from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                                                                       inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                                                       on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                                                                       where ${idxStrs}
+                                                                   ))
+                                            and T5.COUNT_RULES_CODE = 'R_00000'
+                        ) or LABEL_ID in (select T8.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T8
+                                             left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T9
+                                             on T8.LABEL_ID=T9.LABEL_ID
+                                             left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T10
+                                             on T9.COUNT_RULES_CODE = T10.COUNT_RULES_CODE
+                                             where T8.LABEL_ID in(
+                                                  select T7.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T7 where T7.LABEL_ID in (
+                                                             select T4.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T4
+                                                             left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T5
+                                                             on T4.LABEL_ID=T5.LABEL_ID
+                                                             left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T6
+                                                             on T5.COUNT_RULES_CODE = T6.COUNT_RULES_CODE
+                                                             where T4.LABEL_ID in (select T3.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T3 where T3.LABEL_ID in (
+                                                                                        select T1.LABEL_ID
+                                                                                        from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                                                                                        inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                                                                        on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                                                                                        where ${idxStrs}
+                                                                                    ))
+                                                             and T5.COUNT_RULES_CODE = 'R_00000'
+                                                             ))
+                                             and T9.COUNT_RULES_CODE = 'R_00000'
+                        ) or LABEL_ID in (
+                                             select T12.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T12
+                                             left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T13
+                                             on T12.LABEL_ID=T13.LABEL_ID
+                                             left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T14
+                                             on T13.COUNT_RULES_CODE = T14.COUNT_RULES_CODE
+                                             where T12.LABEL_ID in(
+                                                  select T11.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T11 where T11.LABEL_ID in(
+                                                          select T8.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T8
+                                                          left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T9
+                                                          on T8.LABEL_ID=T9.LABEL_ID
+                                                          left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T10
+                                                          on T9.COUNT_RULES_CODE = T10.COUNT_RULES_CODE
+                                                          where T8.LABEL_ID in(
+                                                               select T7.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T7 where T7.LABEL_ID in (
+                                                                          select T4.LABEL_ID  from $[SRC_TABLE_CI_LABEL_INFO] T4
+                                                                          left join $[SRC_TABLE_CI_LABEL_EXT_INFO] T5
+                                                                          on T4.LABEL_ID=T5.LABEL_ID
+                                                                          left join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T6
+                                                                          on T5.COUNT_RULES_CODE = T6.COUNT_RULES_CODE
+                                                                          where T4.LABEL_ID in (select T3.PARENT_ID from $[SRC_TABLE_CI_LABEL_INFO] T3 where T3.LABEL_ID in (
+                                                                                                     select T1.LABEL_ID
+                                                                                                     from $[SRC_TABLE_CI_LABEL_EXT_INFO] T1
+                                                                                                     inner join $[SRC_TABLE_DIM_COC_LABEL_COUNT_RULES] T2
+                                                                                                     on T1.COUNT_RULES_CODE = T2.COUNT_RULES_CODE
+                                                                                                     where ${idxStrs}
+                                                                                                 ))
+                                                                          and T5.COUNT_RULES_CODE = 'R_00000'
+                                                                          ))
+                                                          and T9.COUNT_RULES_CODE = 'R_00000'
+                                                           ))
+                                             and T13.COUNT_RULES_CODE = 'R_00000'
+                        )
+                    )
+	
+	
+	</select>
+	
+	
+	<insert id="insertReRunLabelTable">
+		
+		insert into $[SRC_TABLE_COC_LABEL_RERUN] (
+                    LABEL_ID
+                   ,DATA_DATE
+                   ,DATA_INSERT_TIME
+                   ,HAS_SEND_NOTICE
+                ) select
+                    LABEL_ID
+                   ,DATA_DATE
+                   ,current timestamp   DATA_INSERT_TIME
+                   ,$[STATUS_LABEL_RERUN_NO_SEND_NOTICE]
+                from $[SRC_TABLE_COC_LABEL_STATUS]
+                where DATA_DATE='${date}' and DATA_STATUS=$[STATUS_LABEL_WAIT_RERUN] and DATA_BATCH=${batchNo}
+	
+	</insert>
+	
+	<select id="queryMainTableDatas" resultType="Integer">
+		
+		select
+                count(1)
+            from $[SRC_TABLE_INDEX_SOURCE_STATUS] T1
+            where DATA_SOURCE_ID='${dwCode}' and DATA_SOURCE_TIME='${date}'
+                and data_source_status=$[STATUS_IDX_SRC_READY]
+	
+	</select>
+	
+	
+	<insert id="insertCurrentTags" parameterType="Map">
+	
+		insert into $[SRC_TABLE_COC_INDEX_STATUS] (
+                     INDEX_CODE
+                    ,DATA_DATE
+                    ,DATA_STATUS
+                    ,DATA_INSERT_TIME
+                    ,DATA_BATCH
+                    ,pid
+                ) select
+                    T2.INDEX_CODE                           INDEX_CODE
+                   ,'${param.dataStatusDate}'                     DATA_DATE
+                   ,$[STATUS_INDEX_RUNNING]            DATA_STATUS
+                   ,current timestamp   DATA_INSERT_TIME
+                   ,${param.batchNo}                              DATA_BATCH
+                   ,${param.threadId}                               pid
+                from $[SRC_TABLE_DIM_COC_INDEX_TABLE_INFO] T1
+                inner join $[SRC_TABLE_DIM_COC_INDEX_INFO] T2
+                   on T1.DATA_SRC_CODE = T2.DATA_SRC_CODE
+                inner join $[SRC_TABLE_DIM_COC_INDEX_MODEL_TABLE_CONF] T5
+                   on T2.TARGET_TABLE_CODE = T5.TARGET_TABLE_CODE
+                left join $[SRC_TABLE_INDEX_SOURCE_STATUS] T3
+                   on T1.DATA_SRC_CODE = T3.DATA_SOURCE_ID
+                left join (
+                    select INDEX_CODE
+                    from $[SRC_TABLE_COC_INDEX_STATUS]
+                    where DATA_DATE='${param.dataStatusDate}'
+                ) T4
+                   on T2.INDEX_CODE = T4.INDEX_CODE
+                where T3.DATA_SOURCE_TIME = '${param.dataStatusDate}' and T5.TABLE_DATA_CYCLE=${param.tbCycle}
+                   and T3.DATA_SOURCE_STATUS = $[STATUS_IDX_SRC_READY]
+                   and T4.INDEX_CODE is null
+                   and T2.EFFECTIVE_TIME <![CDATA[ <= ]]> date('${param.dateIso}')
+                   and T2.INVALID_TIME <![CDATA[ > ]]> date('${param.dateIso}')
+                   and T5.EFFECTIVE_TIME <![CDATA[ <= ]]>  date('${param.dateIso}')
+                   and T5.INVALID_TIME <![CDATA[ > ]]> date('${param.dateIso}')
+                   ${param.tabListStr}
+	</insert>
+	
+	
+	<select id="queryCurrentBatchTags" resultType="java.util.HashMap">
+		select
+            T1.TARGET_TABLE_CODE
+           ,T1.INDEX_DESC
+           ,T1.INDEX_CODE
+           ,T1.DATA_TYPE
+           ,T1.STAT_CYCLE
+           ,T1.DEFAULT_VALUE
+           ,T1.DATA_SRC_COL_NAME
+           ,T1.DATA_SRC_CODE
+           ,T2.DATA_SRC_TAB_NAME
+           ,T2.TABLE_DATA_CYCLE
+           ,T2.JOIN_COLUMN
+           ,T2.JOIN_RULES
+           ,row_number() over(
+               partition by T1.TARGET_TABLE_CODE,T2.DATA_SRC_CODE,T2.TABLE_DATA_CYCLE,T2.JOIN_COLUMN,T2.JOIN_RULES
+               order by t2.DATA_SRC_CODE DESC
+            ) RANK
+           ,T4.TARGET_TABLE_NAME
+           ,T4.TABLE_DATA_CYCLE
+        from $[SRC_TABLE_DIM_COC_INDEX_INFO] T1
+        inner join $[SRC_TABLE_DIM_COC_INDEX_TABLE_INFO] T2
+            on T1.DATA_SRC_CODE=T2.DATA_SRC_CODE
+        inner join $[SRC_TABLE_DIM_COC_INDEX_MODEL_TABLE_CONF] T4
+            on T1.TARGET_TABLE_CODE=T4.TARGET_TABLE_CODE
+        inner join $[SRC_TABLE_COC_INDEX_STATUS] T3
+            on T1.INDEX_CODE=T3.INDEX_CODE
+        where T3.DATA_BATCH=${batchNo} and T3.DATA_DATE='${date}'
+        order by T1.TARGET_TABLE_CODE,T1.DATA_SRC_CODE,RANK
+	
+	
+	</select>
+	
+	<select id="queryTargetTableStatu" resultType="Integer">
+		
+		 select STATUS_ID from $[SRC_TABLE_DST_TABLE_STATUS] T1
+            where TABLE_ID= '${tableCode}'
+                and DATA_DATE='${date}' and TABLE_TYPE = $[TABLE_TYPE_INDEX_TABLE]
+	
+	</select>
+	
+	<update id="updateTableIndexStatusFail">
+		
+		update $[SRC_TABLE_COC_INDEX_STATUS]
+        set DATA_STATUS=$[STATUS_INDEX_FAIL] , EXCEPTION_DESC = '${errorMsg}'
+        where DATA_STATUS=$[STATUS_INDEX_RUNNING] and DATA_DATE='${date}'
+            and DATA_BATCH = ${currBatch} and INDEX_CODE in (
+                select INDEX_CODE
+                from $[SRC_TABLE_DIM_COC_INDEX_INFO]
+                where TARGET_TABLE_CODE = '${tableCode}'
+            )
+            
+	
+	</update>
+	
+	
+	<update id="updateDstStatus">
+		
+		update $[SRC_TABLE_DST_TABLE_STATUS]
+            set STATUS_ID=${newStatus} ,DATA_BATCH=${batch} , pid = ${threadId} ,EXCEPTION_DESC='${desc}'
+            where STATUS_ID=${oldStatus}  and DATA_DATE='${date}' and TABLE_TYPE = ${tableType}
+            <choose>
+				<when test="batchEqual != null and batchEqual == '1'">
+					and DATA_BATCH = ${batch}
+				</when>
+				<when test="batchEqual != null and batchEqual == '0'">
+					and DATA_BATCH <![CDATA[ <> ]]> ${batch}
+				</when>
+            </choose>
+            <if test=" tableCode != null and tableCode != ''">
+            	and TABLE_ID= '${tableCode}'
+            </if>
+	</update>
+	
+	
+	<select id="getTargetTableStatus" resultType="Integer">
+		 select COUNT(1) from $[SRC_TABLE_DST_TABLE_STATUS] T1
+                where TABLE_ID= '${tableCode}' and STATUS_ID=$[STATUS_IDX_DST_RUNNING] and DATA_BATCH = ${batch}
+                    and DATA_DATE='${date}' and TABLE_TYPE = $[TABLE_TYPE_INDEX_TABLE]	
+	</select>
+	
+	<select id="getColsByDictTabSqlNamespace" resultType="java.util.Map">
+	
+		select
+                COLNAME
+               ,value(TYPENAME,$[FLAG_NO_NULL]) FLAG01
+               ,case when TYPENAME='DOUBLE' or TYPENAME='REAL'
+                  or TYPENAME='BIGINT' or TYPENAME='SMALLINT' or TYPENAME='INTEGER'
+                  or TYPENAME='DATE' or TYPENAME='TIME' or TYPENAME='TIMESTAMP'
+                  or TYPENAME='XML' or TYPENAME='LONG VARCHAR' or TYPENAME='LONG VARGRAPHIC'
+                then $[FLAG_NO_NULL] 
+                else value(LENGTH,$[FLAG_NO_NULL]) end FLAG02
+               ,case when TYPENAME='DOUBLE' or TYPENAME='REAL'
+                  or TYPENAME='BIGINT' or TYPENAME='SMALLINT' or TYPENAME='INTEGER'
+                  or TYPENAME='BLOB' or TYPENAME='CLOB' or TYPENAME='XML'
+                  or TYPENAME='DATE' or TYPENAME='TIME' or TYPENAME='TIMESTAMP'
+                  or TYPENAME='CHARACTER' or TYPENAME='VARCHAR' or TYPENAME='LONG VARCHAR' or TYPENAME='LONG VARGRAPHIC'
+                then $[FLAG_NO_NULL]
+                else  value(scale,$[FLAG_NO_NULL]) end FLAG03
+            from SYSCAT.COLUMNS
+            where TABSCHEMA='${schema}' and TABNAME='${tableName}'
+                 and (${expColsSql})
+	
+	</select>
+	
+	
+	<insert id="insertDstTableData" parameterType="string" statementType="STATEMENT">
+		${sql}
+	</insert>
+	
+	<insert id="insertDstStatus">
+		
+		insert into $[SRC_TABLE_DST_TABLE_STATUS] (
+            TABLE_ID
+           ,DATA_DATE
+           ,TABLE_TYPE
+           ,STATUS_ID
+           ,DATA_BATCH
+           ,pid
+        ) values (
+            '${tableCode}'
+           ,'${date}'
+           ,${tableType}
+           ,${status}
+           ,${batch}
+           ,${threadId}
+        )
+		
+	</insert>
+	
+	<update id="updateTagsStatus">
+	
+		update $[SRC_TABLE_COC_INDEX_STATUS]
+            set DATA_STATUS=${status4Set}
+            where DATA_STATUS=${statusCon} and DATA_DATE='${date}'
+                and DATA_BATCH = ${batch} and INDEX_CODE in ('${idxList}')
+	
+	
+	</update>
+	
+	<update id="recoverTagStatusOk">
+		 update $[SRC_TABLE_COC_INDEX_STATUS]
+        set DATA_STATUS=$[STATUS_INDEX_FAIL]
+        where DATA_STATUS=$[STATUS_INDEX_RUNNING] and DATA_DATE='${date}'
+            and DATA_BATCH = ${batchNo} and INDEX_CODE in ('${sql}')
+	</update>
+	
+	
+	
+
+</mapper>

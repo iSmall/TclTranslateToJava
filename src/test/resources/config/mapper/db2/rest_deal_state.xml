@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8" ?>    
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ai.tag.dao.IRestDealStateDao">
+
+	<select id="queryUnsuccessfulStatus" resultType="java.util.HashMap">
+		SELECT
+		  T1.TABLE_ID,
+		  value(T1.PID,-9) PID,
+		  T1.STATUS_ID,
+		  T2.TARGET_TABLE_NAME IDX_DST_TABLE_NAME,
+		  T3.TABLE_NAME LABEL_DST_TABLE_NAME,
+		  value(T3.TABLE_SCHEMA,'-9') LABEL_DST_TABLE_SCHEMA,
+		  T1.TABLE_TYPE,
+		  T1.EXCEPTION_DESC
+		FROM  $[SRC_TABLE_DST_TABLE_STATUS] T1
+		LEFT JOIN $[SRC_TABLE_DIM_COC_INDEX_MODEL_TABLE_CONF] T2
+		ON T1.TABLE_ID = T2.TARGET_TABLE_CODE
+		LEFT JOIN $[SRC_TABLE_CI_MDA_SYS_TABLE] T3
+		ON T1.TABLE_ID = CHAR(T3.TABLE_ID)
+		WHERE T1.DATA_DATE        = #{date}
+		AND T1.STATUS_ID NOT IN ($[STATUS_IDX_DST_SEC],$[STATUS_LABEL_DST_SEC],$[STATUS_LABEL_CNT_DST_SEC])
+	</select>
+	
+	<select id="queryUnsucccessfulTargetList" resultType="java.util.HashMap">
+		SELECT
+		  INDEX_CODE,
+		  DATA_STATUS,
+		  DATA_BATCH,
+		  value(PID,-9) PID
+		FROM
+		  $[SRC_TABLE_COC_INDEX_STATUS]
+		WHERE DATA_DATE=#{date}
+		AND DATA_STATUS <![CDATA[ <> ]]> $[STATUS_INDEX_SEC]
+	</select>
+	
+	<update id="updateExceptionTableStatus">
+		UPDATE
+		  $[SRC_TABLE_DST_TABLE_STATUS]
+		SET
+		  STATUS_ID     = #{newStatus},
+		  DATA_BATCH    = #{batchNo},
+		  PID           = #{pid} ,
+		  EXCEPTION_DESC=''
+		WHERE
+		  STATUS_ID    = #{oldStatus}
+		AND DATA_DATE  = #{date}
+		AND TABLE_TYPE = #{tableType}
+		AND TABLE_ID   = #{tableId}
+	</update>
+	
+	<delete id="deleteExceptionTableStatus">
+		DELETE
+		FROM
+		  $[SRC_TABLE_DST_TABLE_STATUS]
+		WHERE TABLE_ID=#{tableId} and DATA_DATE=#{date} and TABLE_TYPE=#{tableType}
+	</delete>
+	
+	<delete id="deleteStatusFromLableStauts" parameterType="java.util.List">
+		DELETE
+			FROM
+			  $[SRC_TABLE_COC_INDEX_STATUS] T1
+			WHERE
+			  T1.DATA_DATE= #{date}
+			AND EXISTS
+			  (
+			    SELECT
+			      1
+			    FROM
+			      $[SRC_TABLE_DIM_COC_INDEX_INFO] T2
+			    WHERE
+			      T1.INDEX_CODE=T2.INDEX_CODE
+			    AND T2.TARGET_TABLE_CODE IN 
+			    <foreach collection="tableIdList" item="delTableId" index="index" open="(" close=")" separator=",">
+		            #{delTableId}
+		        </foreach>
+			  )
+	</delete>
+	
+	<delete id="deleteTargetStatus">
+		delete from $[SRC_TABLE_COC_INDEX_STATUS] T1 where T1.DATA_DATE=#{date} and  T1.INDEX_CODE=#{indexCode}
+	</delete>
+	
+	<delete id="deleteLabelStatusByErrTableList"  parameterType="java.util.List">
+		DELETE
+		FROM
+		  $[SRC_TABLE_COC_LABEL_STATUS] T1
+		WHERE
+		  T1.DATA_DATE=#{date}
+		AND EXISTS
+		  (
+		    SELECT 1
+		    FROM $[SRC_TABLE_CI_MDA_SYS_TABLE] T2
+		    INNER JOIN $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T3
+		    ON T2.TABLE_ID=T3.TABLE_ID
+		    INNER JOIN $[SRC_TABLE_CI_LABEL_EXT_INFO] T4
+		    ON T3.COLUMN_ID=T4.COLUMN_ID
+		    INNER JOIN $[SRC_TABLE_CI_LABEL_INFO] T5
+		    ON  T4.LABEL_ID=T5.LABEL_ID
+		    WHERE T1.LABEL_ID             =T4.LABEL_ID
+		    AND T2.TARGET_TABLE_CODE IN 
+		    	<foreach collection="tableIdList" item="delTableId" index="index" open="(" close=")" separator=",">
+		            #{delTableId}
+		        </foreach>
+		    AND((T5.LABEL_TYPE_ID=1 AND T1.DATA_STATUS=4)
+		      OR(T5.LABEL_TYPE_ID <![CDATA[ <> ]]> 1 AND T5.LABEL_TYPE_ID <![CDATA[ <> ]]> 3)
+		      OR(T5.LABEL_TYPE_ID            =3
+		        AND T4.COUNT_RULES_CODE      IS NOT NULL
+		        AND T4.ATTR_VAL              IS NULL
+		        AND trim(T4.COUNT_RULES_CODE) <![CDATA[ <> ]]>''
+		        AND T4.IS_STAT_USER_NUM       =0
+		        )
+		      )
+		  )
+	</delete>
+	
+	<update id="updateLabelStatusByErrTableList" parameterType="java.util.List">
+		UPDATE
+		  sccoc.DIM_COC_LABEL_STATUS T1
+		SET
+		  DATA_STATUS=$[STATUS_LABEL_RULE_SEC]
+		WHERE
+		  T1.DATA_DATE    =#{date}
+		AND T1.DATA_STATUS=$[STATUS_LABEL_CNT_SEC]
+		AND EXISTS
+		  (
+		    SELECT 1
+		    FROM $[SRC_TABLE_CI_MDA_SYS_TABLE] T2
+		    INNER JOIN $[SRC_TABLE_CI_MDA_SYS_TABLE_COLUMN] T3
+		    ON T2.TABLE_ID=T3.TABLE_ID
+		    INNER JOIN $[SRC_TABLE_CI_LABEL_EXT_INFO] T4
+		    ON T3.COLUMN_ID=T4.COLUMN_ID
+		    INNER JOIN $[SRC_TABLE_CI_LABEL_INFO] T5
+		    ON T4.LABEL_ID=T5.LABEL_ID
+		    WHERE T1.LABEL_ID=T4.LABEL_ID
+		    AND T2.TARGET_TABLE_CODE in 
+		   		<foreach collection="tableIdList" item="delTableId" index="index" open="(" close=")" separator=",">
+		            #{delTableId}
+		        </foreach>
+		  )
+	</update>
+	
+	<select id="queryTargetStatusInfo" resultType="java.util.HashMap">
+		 SELECT
+		  P1.LABEL_ID ,
+		  P1.DATA_STATUS ,
+		  P1.DATA_BATCH ,
+		  value(P1.PID,-9) PID,
+		  P1.EXCEPTION_DESC ,
+		  P2.LABEL_TYPE_ID,
+		  P3.IS_STAT_USER_NUM
+		FROM
+		  (SELECT *
+		    FROM $[SRC_TABLE_COC_LABEL_STATUS]
+		    WHERE DATA_DATE          = #{date}
+		    AND DATA_STATUS NOT IN (4,5,6,1)
+		  )
+		  P1
+		LEFT JOIN $[SRC_TABLE_CI_LABEL_INFO] P2
+		ON P1.LABEL_ID=P2.LABEL_ID
+		LEFT JOIN $[SRC_TABLE_CI_LABEL_EXT_INFO] P3
+		ON P2.LABEL_ID=P3.LABEL_ID
+	</select>
+	<update id="updateLabelState">
+		UPDATE
+		  $[SRC_TABLE_COC_LABEL_STATUS]
+		SET
+		  DATA_STATUS    =#{newStatus} ,
+		  EXCEPTION_DESC = #{desc} ,
+		  pid            =#{pid}
+		WHERE DATA_STATUS =#{oldStatus}
+		AND DATA_DATE =#{date}
+		AND LABEL_ID  =#{labelID}
+		AND DATA_BATCH=#{batchNo}
+	</update>
+	
+	<delete id="delLabelStatusByLabelList" parameterType="java.util.List">
+		delete from $[SRC_TABLE_COC_LABEL_STATUS] T1 where T1.DATA_DATE=#{date} and T1.LABEL_ID in
+		<foreach collection="tableIdList" item="delTableId" index="index" open="(" close=")" separator=",">
+            #{delTableId}
+        </foreach>
+	</delete>
+</mapper>
